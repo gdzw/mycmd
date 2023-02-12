@@ -384,6 +384,9 @@ check)
    echo ""
    ./mycmd dlock
 ;;
+osrule)
+   cat ./osinfo/osrule.txt
+;;
 *)
    echo
    echo "Usage: mib keyword [value1] ";
@@ -432,7 +435,8 @@ check)
    echo "  runstat                       -- get QPS TPS|MySQL Command Status|Innodb row operation|Buffer Pool Read"
    echo "  info                          -- get basic database information"
    echo "  stat                          -- get basic database performance information"
-   echo "  os                            -- get operating system information"
+   echo "  osinfo                        -- get operating system information"
+   echo "  osrule                        -- get operating system parameter suggestions"
    echo "  check                         -- One click patrol of database"
    echo "  ----------------------------------------------------------------";
    echo
