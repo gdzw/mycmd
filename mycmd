@@ -1,0 +1,440 @@
+#!/bin/sh
+#version 3.0
+#Please use "mysql_config_editor" to set up the connection environment first
+#mysql_config_editor set --login-path=admin --host=localhost --user=root --socket=/opt/mysql/run/mysql.sock --password
+MYSQL_CMD="mysql --login-path=admin"
+MYSQLADMIN_CMD="mysqladmin --login-path=admin"
+case $1 in
+  si) 
+    ${MYSQL_CMD}
+  ;;
+  sp)
+    ${MYSQL_CMD} -e "show processlist;"
+  ;;
+  spl)
+    ${MYSQL_CMD} -e "show full processlist;"
+  ;;
+  slave)
+    ${MYSQL_CMD} -e "show slave status \G"
+  ;;
+  master)
+    ${MYSQL_CMD} -e "show master status \G"
+  ;;    
+  logs)
+    ${MYSQL_CMD} -e "show master logs;"
+  ;;
+  binary)
+    ${MYSQL_CMD} -e "show binary logs;"
+  ;;
+  sbe)
+    if [ "$2"zw != zw ] && [ "$3"zw != zw ]; then
+        ${MYSQL_CMD} -e "show binlog events in '$2' from $3 limit $4 \G"
+    else
+        echo "please input second paramter, third parameter and fourth parameter"
+    fi
+  ;;
+  sgs)
+    if [ "$2"zw != zw ]; then
+        ${MYSQL_CMD} -e "show global variables like '%$2%';"
+    else
+        echo "please input global status name parameters"
+    fi
+  ;; 
+  ssv)
+    if [ "$2"zw != zw ]; then
+        ${MYSQL_CMD} -e "show variables like '%$2%';"
+    else
+        echo "please variables second parameters"
+    fi
+  ;;
+  status)
+    ${MYSQL_CMD} -e "status"
+  ;;
+  exp_id)
+  if [ "$2"zw != zw ]; then
+        ${MYSQL_CMD} -e "EXPLAIN FOR CONNECTION $2;"
+    else
+        echo "plese input second parameters with connection id by processlist id column"
+    fi
+  ;;
+  active)
+    ${MYSQL_CMD} -e "select id,user,substring_index(host,':',1) hostip,db,command,time,state,\
+         REPLACE(REPLACE(left(info,30),CHAR(10),''),CHAR(13),'') as info \
+         from information_schema.processlist where command !='Sleep' and info is not null limit 10;"
+  ;;
+  conncnt)
+    ${MYSQL_CMD} -e "select user,substring_index(host,':',1) hostip,command,count(*) as host_conn  \
+        from information_schema.processlist group by user,hostip,command order by host_conn desc;"
+  ;;  
+  sqltext)
+    if [ "$2"zw != zw ]; then
+        ${MYSQL_CMD} -e "select info from information_schema.processlist where id=$2;"
+    else
+        echo "plese input second parameters with connection id by processlist id column"
+    fi
+  ;;
+  kus)
+    if [ "$2"zw != zw ]; then
+        echo "input kill session user:${PVARIABLE}"
+        killfile=/tmp/kill.txt`date +"%Y%m%d%H%M%S"`
+        echo "kill session file in ${killfile}"
+        ${MYSQL_CMD} -e "select concat('kill ',ID,';') from information_schema.processlist where user='$2';"
+    else
+        echo "put input kill session user by second parameters"
+    fi  
+  ;;  
+  noidx)
+    ${MYSQL_CMD} -e "select a.table_schema,a.table_name from information_schema.tables a \
+    left join information_schema.statistics b on a.table_schema=b.table_schema and a.table_name=b.table_name \
+        where a.table_schema not in ('information_schema','performance_schema','mysql','sys') and b.table_name is null;"
+  ;;
+  nopk)
+    ${MYSQL_CMD} -e "select distinct table_schema,table_name,non_unique,index_schema,index_name from information_schema.statistics a \
+        where a.table_schema not in ('information_schema','performance_schema','mysql','sys')and NON_UNIQUE=1 "
+  ;;  
+  tabidx)
+    if [ "$2"zw != zw ] && [ "$3"zw != zw ]; then
+        ${MYSQL_CMD} -e "show index from $2.$3;"
+    else
+        echo "please input second paramter with table_owner and third parameter with table_name"
+    fi
+  ;;   
+  user)
+    ${MYSQL_CMD} -e "select distinct concat('User: ''',user,'''@''',host,''';') AS query from mysql.user;"
+  ;;    
+  userinfo)
+    if [ "$2"zw != zw ]; then
+        ${MYSQL_CMD} -e " select * from mysql.user where user like '%$2%' \G"
+    else
+        echo "please input second paramter with user name"
+    fi
+  ;;
+  userpriv)
+    ${MYSQL_CMD} -e "select distinct concat('show grants for ''',user,'''@''',host,''';') AS query from mysql.user;"
+  ;;  
+  db)
+    ${MYSQL_CMD} -e "show databases;"
+  ;;
+  dbsize)
+    ${MYSQL_CMD} -e "select TABLE_SCHEMA, concat(truncate(sum(data_length)/1024/1024/1024,2),' GB') as data_size,\
+        concat(truncate(sum(index_length)/1024/1024/1024,2),'GB') as index_size\
+        from information_schema.tables group by TABLE_SCHEMA order by data_length desc;"
+  ;; 
+  toptab)
+    ${MYSQL_CMD} -e "select table_schema,table_name,table_rows,concat(truncate(data_length/1024/1024/1024,2),' GB') as data_size,\
+        concat(truncate(index_length/1024/1024/1024,2),' GB') as index_size from information_schema.tables  order by data_length desc limit 10;"
+        ;;
+  thwm)
+    if [ "$2"zw != zw ]; then
+        ${MYSQL_CMD} -e "select table_name,table_rows,concat(round(data_length/1024/1024, 2), 'MB') as size,data_free \
+                from information_schema.tables where data_free>0 and table_name='$2'"
+    else
+        echo "please input second paramter with table_name"
+    fi
+  ;;
+  sot)
+    ${MYSQL_CMD} -e " show open tables where In_use > 0;"
+  ;;
+  ibstat)
+    ${MYSQL_CMD} -e " show engine innodb status \G"
+  ;;  
+  tabstat)
+    if [ "$2"zw != zw ] && [ "$3"zw != zw ]; then
+        ${MYSQL_CMD} -e "select * from mysql.innodb_table_stats where database_name='$2' and table_name='$3';"
+        else
+        echo "please input second paramter with database_name and third parameter with table_name"
+    fi
+  ;;  
+  idxstat)
+    ${MYSQL_CMD} -e "select * from mysql.innodb_index_stats;"
+  ;;  
+  iblock)
+    ${MYSQL_CMD} -e "SELECT \
+                         waiting_trx_started, \
+                         waiting_trx_id, \
+                         waiting_pid, \
+                         waiting_query,          \
+                         blocking_trx_started,   \
+                         blocking_trx_id,        \
+                         blocking_pid,           \
+                         blocking_lock_mode,     \
+                         blocking_query,sql_kill_blocking_connection          \
+                         FROM sys.innodb_lock_waits order by blocking_pid asc;"
+  ;;
+  iblock2)
+    ${MYSQL_CMD} -e "SELECT * FROM sys.innodb_lock_waits order by blocking_pid asc \G"
+  ;;    
+  iblock3)
+    ${MYSQL_CMD} -e "select blocking_query,sql_kill_blocking_connection,count(*) total \
+                         from sys.innodb_lock_waits \
+                         group by blocking_query,sql_kill_blocking_connection order by total desc;"
+  ;;
+  mlock)
+    ${MYSQL_CMD} -e "SELECT ps.*,lock_summary.lock_summary FROM sys.processlist ps INNER JOIN \
+        (SELECT owner_thread_id, GROUP_CONCAT(DISTINCT CONCAT(mdl.LOCK_STATUS,' ',mdl.lock_type,' on ', \
+        IF( mdl.object_type = 'USER LEVEL LOCK',CONCAT(mdl.object_name, ' (user lock)'),CONCAT(mdl.OBJECT_SCHEMA, '.', mdl.OBJECT_NAME))) \
+        ORDER BY mdl.object_type ASC,mdl.LOCK_STATUS ASC, mdl.lock_type ASC SEPARATOR '\n') as lock_summary \
+        FROM performance_schema.metadata_locks mdl GROUP BY owner_thread_id) lock_summary ON (ps.thd_id = lock_summary.owner_thread_id)\G"
+  ;;  
+  glock)
+    ${MYSQL_CMD} -e "select t.processlist_id from performance_schema.threads t join performance_schema.metadata_locks ml \
+        on ml.owner_thread_id = t.thread_id where ml.object_type='GLOBAL' and ml.lock_type='SHARED';"
+  ;;
+  clock)
+    ${MYSQL_CMD} -e "SELECT r.trx_id waiting_trx_id, r.trx_mysql_thread_id waiting_thread, r.trx_query waiting_query,\
+  b.trx_id blocking_trx_id, b.trx_mysql_thread_id blocking_thread, b.trx_query blocking_query,\
+  bl.lock_id blocking_lock_id, bl.lock_mode blocking_lock_mode, bl.lock_type blocking_lock_type,\
+  bl.lock_table blocking_lock_table, bl.lock_index blocking_lock_index,\
+  rl.lock_id waiting_lock_id, rl.lock_mode waiting_lock_mode, rl.lock_type waiting_lock_type,\
+  rl.lock_table waiting_lock_table, rl.lock_index waiting_lock_index\
+  FROM information_schema.INNODB_LOCK_WAITS w\
+  INNER JOIN information_schema.INNODB_TRX b ON b.trx_id = w.blocking_trx_id\
+  INNER JOIN information_schema.INNODB_TRX r ON r.trx_id = w.requesting_trx_id\
+  INNER JOIN information_schema.INNODB_LOCKS bl ON bl.lock_id = w.blocking_lock_id\
+  INNER JOIN information_schema.INNODB_LOCKS rl ON rl.lock_id = w.requested_lock_id\G"
+  ;;    
+  gmem)
+   ${MYSQL_CMD} -e "select substring_index(event_name,'/',2) AS code_area, sys.format_bytes(sum(current_alloc)) as current_alloc \
+   from sys.x\$memory_global_by_current_bytes group by substring_index(event_name,'/',2) order by sum(current_alloc) desc;"
+  ;;
+  runstat1)
+    ${MYSQLADMIN_CMD} -r -i 1 ext |\
+awk -F"|" \
+"BEGIN{ count=0; }"\
+'{ if($2 ~ /Variable_name/ && ++count == 1){\
+    print "----------|---------|--- MySQL Command Status --|----- Innodb row operation ----|-- Buffer Pool Read --";\
+    print "---Time---|---QPS---|select insert update delete|  read inserted updated deleted|   logical    physical";\
+}\
+else if ($2 ~ /Queries/){queries=$3;}\
+else if ($2 ~ /Com_select /){com_select=$3;}\
+else if ($2 ~ /Com_insert /){com_insert=$3;}\
+else if ($2 ~ /Com_update /){com_update=$3;}\
+else if ($2 ~ /Com_delete /){com_delete=$3;}\
+else if ($2 ~ /Innodb_rows_read/){innodb_rows_read=$3;}\
+else if ($2 ~ /Innodb_rows_deleted/){innodb_rows_deleted=$3;}\
+else if ($2 ~ /Innodb_rows_inserted/){innodb_rows_inserted=$3;}\
+else if ($2 ~ /Innodb_rows_updated/){innodb_rows_updated=$3;}\
+else if ($2 ~ /Innodb_buffer_pool_read_requests/){innodb_lor=$3;}\
+else if ($2 ~ /Innodb_buffer_pool_reads/){innodb_phr=$3;}\
+else if ($2 ~ /Uptime / && count >= 2){\
+  printf(" %s |%9d",strftime("%H:%M:%S"),queries);\
+  printf("|%6d %6d %6d %6d",com_select,com_insert,com_update,com_delete);\
+  printf("|%6d %8d %7d %7d",innodb_rows_read,innodb_rows_inserted,innodb_rows_updated,innodb_rows_deleted);\
+  printf("|%10d %11d\n",innodb_lor,innodb_phr);\
+}}' 2>/dev/null
+  ;; 
+  runstat)
+  ${MYSQLADMIN_CMD} extended-status -i1  |awk 'BEGIN{local_switch=0;\
+    print "----------|---------------|--- MySQL Command Status --|----- Innodb row operation ----|-- Buffer Pool Read --|------Threads Info--------|";\
+    print "---Time---|---QPS---TPS---|select insert update delete|  read inserted updated deleted|   logical    physical|--Threads_con--Threads_run|"}
+    $2 ~ /Queries$/ {q=$4-lq;lq=$4;}
+    $2 ~ /Com_commit$/ {c=$4-lc;lc=$4;}
+    $2 ~ /Com_rollback$/ {r=$4-lr;lr=$4;}
+    $2 ~ /Com_select$/ {S=$4-lS;lS=$4;}
+    $2 ~ /Com_insert$/ {I=$4-lI;lI=$4;}
+    $2 ~ /Com_update$/ {U=$4-lU;lU=$4;}
+    $2 ~ /Com_delete$/ {D=$4-lD;lD=$4;}
+    $2 ~ /Innodb_rows_read$/ {IS=$4-lIS;lIS=$4;}
+    $2 ~ /Innodb_rows_deleted$/ {ID=$4-lID;lID=$4;}
+    $2 ~ /Innodb_rows_inserted$/ {II=$4-lII;lII=$4;}
+    $2 ~ /Innodb_rows_updated$/ {IU=$4-lIU;lIU=$4;}
+    $2 ~ /Innodb_buffer_pool_read_requests$/ {IBRR=$4-lIBRR;lIBRR=$4;}
+    $2 ~ /Innodb_buffer_pool_reads$/ {IBR=$4-lIBR;lIBR=$4;}
+    $2 ~ /Threads_connected$/ {tc=$4;}
+    $2 ~ /Threads_running$/ {tr=$4;
+    if(local_switch==0)
+    {local_switch=1; count=0}
+    else {
+    if(count>10)
+    {count=0;print "----------|---------------|--- MySQL Command Status --|----- Innodb row operation ----|-- Buffer Pool Read --|------Threads Info--------|";\
+    print "---Time---|---QPS---TPS---|select insert update delete|  read inserted updated deleted|   logical    physical|--Threads_con--Threads_run|"}
+    else{
+    count+=1;
+    printf(" %s |%4d %6d",strftime("%H:%M:%S"),q,c+r);\
+    printf("    |%5d %5d %5d %5d",S,I,U,D);\
+    printf("    |%6d %7d %7d %7d",lIS,lII,lIU,lID);\
+    printf(" |%10d %11d",IBRR,IBR);\
+    printf("|%10d %11d    |\n",tc,tr);\
+    }
+    }
+    }' 2>/dev/null
+  ;;
+refresh)
+    if [ "$2"zw != zw ] && [ $3 -gt 0 ]; then
+        while true; do sh ./mycmd $2 >/tmp/mycmd_refresh.txt;cat /tmp/mycmd_refresh.txt;sleep $3; done
+        #watch -n $2 "sh ./mycmf $3"
+    else
+        echo "please input second paramter with table_owner and third parameter with table_name"
+    fi
+  ;;
+osinfo)
+  sh ./osinfo/os_summary.sh 
+  ;;
+
+stat)
+   NAME_VAL_LEN=12
+   name_val () {
+      #printf "%+*s | %s\t" "${NAME_VAL_LEN}" "$1" "$2"
+      printf "%+*s | %s\n" "${NAME_VAL_LEN}" "$1" "$2"
+   }
+   
+   memtotal=`vmstat -s | head -1 | awk '{print $1}'`
+   avm=`vmstat -s| sed -n '3p' | awk '{print $1}'`
+   SysCPUIdle=`vmstat | sed -n '$ p' | awk '{print $15}'`
+   datadir=`${MYSQL_CMD} -N -s -e "show global variables like 'datadir';"|awk '{print $2}'|awk -F"/" '{print "/"$2}'`
+   
+   R1=`${MYSQL_CMD} -N -s -e "show global status like 'Bytes_received';"|awk '{print $2}'`
+   T1=`${MYSQL_CMD} -N -s -e "show global status like 'Bytes_sent';"|awk '{print $2}'`
+   sleep 1
+   R2=`${MYSQL_CMD} -N -s -e "show global status like 'Bytes_received';"|awk '{print $2}'`
+   T2=`${MYSQL_CMD} -N -s -e "show global status like 'Bytes_sent';"|awk '{print $2}'`
+   
+   TBPS=`expr $T2 - $T1`
+   RBPS=`expr $R2 - $R1`
+   TKBPS=`expr $TBPS / 1024`
+   RKBPS=`expr $RBPS / 1024`
+
+   name_val "CPU_Used(%):" "`echo "100 - ${SysCPUIdle}" |bc `%"
+   name_val "Mem_Used(%):" "`echo "100*${avm}/${memtotal}" | bc`%"
+   name_val "Disk_Used(%):" "`df ${datadir}|sed '1d'|awk '{print $5}'`"
+   name_val "NetWork_Used:" "`echo "TX: $TKBPS kb/s  RX: $RKBPS kb/s"`"
+;;
+info)
+   NAME_VAL_LEN=12
+   name_val () {
+      #printf "%+*s | %s\t" "${NAME_VAL_LEN}" "$1" "$2"
+      printf "%+*s | %s\n" "${NAME_VAL_LEN}" "$1" "$2"
+   }
+   
+   cores=`grep -c ^processor /proc/cpuinfo` 
+   m=`vmstat -s | head -1 | awk '{print $1}'`
+   mem=$(printf "%.0f\n" $((${m}/1024/1024)))
+   
+   host=`${MYSQL_CMD} -N -s -e "show global variables like 'hostname';"|awk '{print $2}'|sed 's/\t//g'`
+   version=`${MYSQL_CMD} -N -s -e "select @@version;"`
+   datadir=`${MYSQL_CMD} -N -s -e "show global variables like 'datadir';"|awk '{print $2}'|awk -F"/" '{print "/"$2}'`
+   up=`${MYSQL_CMD} -N -s -e "status;"|grep -i uptime|awk -F":" '{print $2}'|sed 's/\t//g'`
+   
+   name_val "hostname:" "${host}"
+   name_val "version:" "${version}"
+   name_val "uptime:" "${up}"
+   name_val "config:" "${cores}C ${mem}G"
+   name_val "Disk_Size:" "`df -h ${datadir}|sed '1d'|awk '{print $2}'`"   
+;;
+dlock)
+   name_val () {
+      printf "%-16s : %-60s | %-60s\n" "$1" "$2" "$3"
+   }
+   ${MYSQL_CMD} -N -s -e "show engine innodb status\G" >/tmp/innodb_status.log
+   dnum=`grep -c "LATEST DETECTED DEADLOCK" /tmp/innodb_status.log`
+   if [ ${dnum} -eq 0 ];then
+       echo "This instance has no deadlock"
+   else
+       sed -n '/LATEST DETECTED DEADLOCK/,/WE ROLL BACK TRANSACTION/p' /tmp/innodb_status.log >/tmp/deadlock.log
+       dtime=`sed -n '3p' /tmp/deadlock.log|awk '{print $1" "$2}'`
+       sed -n '/(1) TRANSACTION:/,/(2) TRANSACTION:/p' /tmp/deadlock.log >/tmp/tran1.log
+       sed -n '/(2) TRANSACTION:/,$p' /tmp/deadlock.log >/tmp/tran2.log
+       
+       idx1=`awk -F"index" '/index/{print $2}' /tmp/tran1.log |awk '{print $1}'|grep -v read |uniq`
+       thr1=`awk -F"thread id" '/thread id/{print $2}' /tmp/tran1.log |awk -F"," '{print $1}'`
+       session1=`awk -F"query id" '/query id/{print $2}' /tmp/tran1.log |awk '{print $1}'`
+       trxid1=`awk -F"trx id" '/trx id/{print $2}' /tmp/tran1.log |sed -n '1p'|awk '{print $1}'`
+       table1=`awk -F"table" '/table/{print $2}' /tmp/tran1.log |grep -wv "s in" |awk '{print $1}'|uniq`
+       rid1=`awk -F"query id" '/query id/{print $2}' /tmp/tran1.log |awk '{print $4}'`
+       lmode1=` awk '{ if(match($0,"lock_mode")) {print substr($0,RSTART+RLENGTH) }}' /tmp/tran1.log |sed '1d'`
+       SQL1=`sed -n '/MySQL thread id/,/\*\*\* (/p' /tmp/tran1.log |sed -e '1d' -e '$d' -e 's/\n/ /g'`
+       
+       idx2=`awk -F"index" '/index/{print $2}' /tmp/tran2.log |awk '{print $1}'|grep -v read |uniq`
+       thr2=`awk -F"thread id" '/thread id/{print $2}' /tmp/tran2.log |awk -F"," '{print $1}'`
+       session2=`awk -F"query id" '/query id/{print $2}' /tmp/tran2.log |awk '{print $1}'`
+       trxid2=`awk -F"trx id" '/trx id/{print $2}' /tmp/tran2.log |sed -n '1p'|awk '{print $1}'`
+       table2=`awk -F"table" '/table/{print $2}' /tmp/tran2.log |grep -wv "s in" |awk '{print $1}'|uniq`
+       rid2=`awk -F"query id" '/query id/{print $2}' /tmp/tran2.log |awk '{print $4}'`
+       lmode2=` awk '{ if(match($0,"lock_mode")) {print substr($0,RSTART+RLENGTH) }}' /tmp/tran2.log |sed '1d'`
+       SQL2=`sed -n '/MySQL thread id/,/\*\*\* (/p' /tmp/tran2.log |sed -e '1d' -e '$d' -e 's/\n/ /g'`
+       
+       rnum=`grep "ROLL BACK" /tmp/deadlock.log |awk -F"(" '{print $2}'|sed 's/)//g'`
+       
+       echo "latest detected deadlock:  ${dtime}"
+       if [ ${rnum} -eq 1 ];then
+           name_val " " "transaction1(rollback)" "transaction2 "
+       else
+          name_val " " "transaction1" "transaction2(rollback)"
+       fi
+       name_val "session id" ${session1} ${session2}
+       name_val "thread id" ${thr1} ${thr2}
+       name_val "request type" ${rid1} ${rid2}
+       name_val "transaction id" ${trxid1} ${trxid2}
+       name_val "table name" ${table1} ${table2}
+       name_val "lock_mode" "${lmode1}" "${lmode2}"
+       name_val "index name" ${idx1} ${idx2}
+       if [ ${rnum} -ne 1 ];then
+           name_val "hold lock" "${lmode1}"
+       else
+           name_val "hold lock" "" "${lmode2}"
+       fi
+       printf "%-16s :\n" "transaction1 sql" ;echo ${SQL1}
+       printf "%-16s :\n" "transaction2 sql" ;echo ${SQL2}
+   fi
+;;
+
+check)
+   ./mycmd info
+   ./mycmd stat
+   echo ""
+   ./mycmd dlock
+;;
+*)
+   echo
+   echo "Usage: mib keyword [value1] ";
+   echo
+   echo "  -----------------------------------------------------------------";
+   echo "  si                            -- login mysql database";
+   echo "  sp                            -- show processlist";
+   echo "  spl                           -- show full processlist";
+   echo "  slave                         -- show slave status\G";
+   echo "  master                        -- show master status \G";  
+   echo "  sml                           -- show master logs";
+   echo "  sbl                           -- show binary logs";
+   echo "  sbe [binlog_name] [pos] [num] -- show binlog events in binlog from pos limit number";   
+   echo "  sgs [name]                    -- show global status by input parameter";  
+   echo "  ssv [variable]                -- get variables by input ";
+   echo "  status                        -- get mysql status";  
+   echo "  exp_id                        -- show sql explain with processlist connection id column";
+   echo "  active                        -- get active session from processlist"
+   echo "  refresh                       -- refresh active session information"
+   echo "  conncnt                       -- count all session from processlist group by user,command,host,state";
+   echo "  sqltext                       -- get sqltext with processlist connection id column";
+   echo "  kus [user]                    -- get the kill session file by input user";
+   echo "  noidx                         -- get no index table";
+   echo "  nopk                          -- get no primary key"; 
+   echo "  tabidx [owner][table_name]    -- get table info with input table_name";       
+   echo "  user                          -- get all user wiht user,host";
+   echo "  userinfo [user]                -- get user with input like user";
+   echo "  userpriv                      -- get user PRIVILEGES with user,host";
+   echo "  db                            -- get all database";
+   echo "  dbsize                        -- get database size with dbname";         
+   echo "  toptab                        -- get top 10 table size";    
+   echo "  thwm [dbname]                 -- get table's HWM";
+   echo "  sot                           -- show OPEN TABLES where In_use > 0";    
+   echo "  ibstat                        -- show engine innodb status \G";
+   echo "  tabstat                       -- show table statistics";       
+   echo "  idxstat                       -- show index statistics";  
+   echo "  iblock                        -- show simple sys.innodb_lock_waits";
+   echo "  iblock2                       -- show all sys.innodb_lock_waits";   
+   echo "  iblock3                       -- show sys.innodb_lock_waits group by kill session"; 
+   echo "  mlock                         -- show Metadata Lock";   
+   echo "  glock                         -- show global lock";
+   echo "  clock                         -- show lock info";
+   echo "  dlock                         -- get the information of the last deadlock"
+   echo "  dlocklog                      -- get the specific information of the last deadlock"   
+   echo "  gmem                          -- get engine use memory";
+   echo "  runstat                       -- get QPS TPS|MySQL Command Status|Innodb row operation|Buffer Pool Read"
+   echo "  info                          -- get basic database information"
+   echo "  stat                          -- get basic database performance information"
+   echo "  os                            -- get operating system information"
+   echo "  check                         -- One click patrol of database"
+   echo "  ----------------------------------------------------------------";
+   echo
+   ;;
+esac
