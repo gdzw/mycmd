@@ -1,3 +1,7 @@
+#mycmd
+
+MySQL命令工具集
+
 mycmd为shell编写的MySQL命令工具集，主要是想收集MySQL常用的命令和语句，方便运维
 
 osinfo目录  【存放操作系统信息的脚本】
