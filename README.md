@@ -1,5 +1,4 @@
-mycmd osinfo --显示操作系统信息，含主机名IP，操作系统版本，内核版本，
-               是否虚拟机（物理机型号，报障SN号），CPU配置，内存配置，磁盘配置，网卡配置等信息
+mycmd osinfo --显示操作系统信息，含主机名IP，操作系统版本，内核版本，是否虚拟机（物理机型号，报障SN号），CPU配置，内存配置，磁盘配置，网卡配置等信息
 
 mysql osrule --给出操作系统的配置建议，RAID，操作系统参数配置等
 
@@ -27,8 +26,7 @@ mycmd temp  --5.7版本，8.0版本，待写脚本
 
 mycmd undo  --undo信息，待写脚本
 
-mycmd check  --基础巡检(mycmd info ，mycmd stat，空间【TOP表，TOP库，无主键表，锁片率TOP表】，冗余索引，
-             最后一次死锁时间【时间维度】,当天错误日志，当天慢SQL数量【没开启提示没开启慢日志】)
+mycmd check  --基础巡检(mycmd info ，mycmd stat，空间【TOP表，TOP库，无主键表，锁片率TOP表】，冗余索引，最后一次死锁时间【时间维度】,当天错误日志，当天慢SQL数量【没开启提示没开启慢日志】)
 
 mycmd tools  --列出MySQL常用的工具，这里先没展开，后续想展开之后，将各个工具常用的内容进行集合
 物理备份工具：xtrabackup，下载地址：
