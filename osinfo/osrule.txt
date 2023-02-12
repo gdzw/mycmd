@@ -1,0 +1,53 @@
+参数类型          	注释	               修改方法
+
+RAID阵列            RAID-10 Raid卡强制Force WriteBack （WB） 使用PCIe-SSD等高速I/O设备
+
+IO	                调整IO调度规则	    sas磁盘:deadline
+                                       ssd磁盘:noop
+                                       cat <<EOF >>/etc/rc.local
+                                       echo deadline >/sys/block/sdb/queue/scheduler
+                                       EOF
+
+IO	                 禁用交换区	       echo "vm.swappiness = 0" >>/etc/sysctl.conf
+                                       sysctl -p
+																			 
+内核	               关闭numa	          #RHEL 4, RHEL 5, RHEL 6 (/boot/grub/grub.conf)
+                                       kernel ... 最后加上numa=off
+                                       #RHEL 7 (/etc/default/grub)
+                                       GRUB_CMDLINE_LINUX …最后加上 numa=off"
+                                       执行grub2-mkconfig -o /etc/grub2.cfg
+                                       参照官网：https://access.redhat.com/solutions/23216
+                                       #SuSE
+                                       1.#vim /etc/grub2.cfg
+                                       2.在第一个UTF-8后添加numa=off
+                                       3.在第二个quiet后添加numa=off
+																			 
+文件系统	            文件数进程数限制	 cat >>/etc/security/limits.conf <<EOF
+                                       * soft nproc 16384
+                                       * hard nproc 65535
+                                       * soft nofile 65536
+                                       * hard nofile 65536
+                                       EOF
+                                       #改完之后打开这个配置文件看看
+																			 
+文件系统	            文件挂载系统	     mount -o remount -o noatime -o nodiratime -o nobarrier /opt
+                                       挂载XFS参数：
+                                       (rw, noatime,nodiratime,nobarrier)
+                                       挂载ext4参数：
+                                       ext4 (rw,noatime,nodiratime,nobarrier,data=ordered)
+																			 
+网络	                 禁用iptables	    #RedHat6
+                                       /etc/init.d/iptables stop
+                                       chkconfig iptables off
+                                       /etc/init.d/ip6tables stop
+                                       chkconfig ip6tables off
+                                       #RedHat7 
+                                       systemctl stop firewalld.service
+                                       systemctl disable firewalld.service
+                                       systemctl mask firewalld.service
+																			 
+网络	                 禁用iv6	        echo "net.ipv6.conf.all.disable_ipv6 =1" >>/etc/sysctl.conf
+                                       sysctl -p
+																			 
+网络	                 禁用selinux	    sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+                                       setenforce 0
